@@ -3,6 +3,7 @@ package rolgo
 import (
 	"errors"
 	"github.com/go-resty/resty/v2"
+	"os"
 )
 
 // Client the base API Client
@@ -12,12 +13,18 @@ type Client struct {
 	Rents RentsService
 }
 
-func NewClient(baseUrl string, apiKey string) *Client {
+func NewClient() (*Client, error) {
 	var c = new(Client)
 
+	url := os.Getenv("ROL_API_URL")
+	key := os.Getenv("ROL_API_KEY")
+	if url == "" || key == "" {
+		return nil, errors.New("it is necessary to assign ROL_API_URL and ROL_API_KEY environment variables")
+	}
+
 	c.resty = resty.New()
-	c.resty.BaseURL = baseUrl
-	c.resty.SetHeader("X-API-Key", apiKey)
+	c.resty.BaseURL = url
+	c.resty.SetHeader("X-API-Key", key)
 	c.resty.OnAfterResponse(func(c *resty.Client, resp *resty.Response) error {
 		if resp.IsError() {
 			return errors.New(resp.Status())
@@ -32,8 +39,7 @@ func NewClient(baseUrl string, apiKey string) *Client {
 		return nil
 	})
 
-
 	c.Rents = &RentsServiceOp{client: c}
 
-	return c
+	return c, nil
 }
