@@ -11,6 +11,11 @@ type DeviceRent struct {
 	MachineState string `json:"machineState"`
 }
 
+type ConsoleLog struct {
+	DateUtc string
+	Text    string
+}
+
 type DeviceRentsResponse struct {
 	ApiResponse
 	Data []DeviceRent `json:"data"`
@@ -19,6 +24,11 @@ type DeviceRentsResponse struct {
 type DeviceRentResponse struct {
 	ApiResponse
 	Data *DeviceRent `json:"data"`
+}
+
+type ConsoleOutputResponse struct {
+	ApiResponse
+	Data []ConsoleLog `json:"data"`
 }
 
 type DeviceRentUpdateRequest struct {
@@ -38,6 +48,7 @@ type RentsService interface {
 	Create(string, *DeviceRentCreateRequest) (*DeviceRent, error)
 	Update(string, string, *DeviceRentUpdateRequest) (*DeviceRent, error)
 	Release(string, string) error
+	GetConsoleOutput(string, string) ([]string, error)
 }
 
 type RentsServiceOp struct {
@@ -115,4 +126,21 @@ func (s *RentsServiceOp) List(projectId string) ([]DeviceRent, error) {
 	}
 
 	return apiResp.Data, nil
+}
+
+func (s *RentsServiceOp) GetConsoleOutput(projectId string, rentId string) ([]string, error) {
+	resty := s.client.resty
+	apiResp := new(ConsoleOutputResponse)
+	_, err := resty.R().
+		SetHeader(projectIdHeader, projectId).
+		SetResult(apiResp).
+		Get(resty.BaseURL + deviceRentsBasePath + rentId + "/console/output")
+	if err != nil {
+		return nil, err
+	}
+	consoleOutput := []string{}
+	for _, consoleLine := range apiResp.Data {
+		consoleOutput = append(consoleOutput, consoleLine.Text)
+	}
+	return consoleOutput, err
 }
